@@ -1,0 +1,4 @@
+<?php
+
+$editor = "";
+echo $editor;
