@@ -1,0 +1,22 @@
+{
+  "key": "TopcoderEditor",
+  "name": "Topcoder Editor",
+  "description": "The Topcoder editor supports Markdown.",
+  "version": "1.0.0",
+  "documentationUrl": "http://vanilla.topcoder-dev.com",
+  "type": "addon",
+  "priority": "101",
+  "icon": "topcoder-logo.jpeg",
+  "mobileFriendly": true,
+  "hasLocale": false,
+  "authors": [
+    {
+      "name": "Topcoder",
+      "email": "support@topcoder.com",
+      "homepage": "https://topcoder.com"
+    }
+  ],
+  "require": {
+    "vanilla": ">=3.2"
+  }
+}
