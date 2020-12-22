@@ -44,18 +44,22 @@
       editorVersion += '&cachebreak=' + editorCacheBreakValue;
     }
 
+    function logMessage(message) {
+      console.log('TopcoderPlugin::'+ message);
+    }
+
     function topcoderHandles(cm, option) {
       return new Promise(function(accept) {
         setTimeout(function() {
-          var cursor = cm.getCursor(), line = cm.getLine(cursor.line)
+          var cursor = cm.getCursor(), line = cm.getLine(cursor.line);
           var start = cursor.ch, end = cursor.ch
           while (start && /\w/.test(line.charAt(start - 1))) --start
           while (end < line.length && /\w/.test(line.charAt(end))) ++end
           var word = line.slice(start, end).toLowerCase();
 
-          console.log('word' + word + ', length:' + word.length);
+          //logMessage('word' + word + ', length:' + word.length);
+
           if(word.length > 1) {
-            console.log('word' + word);
             $.ajax({
               type: "GET",
               url: "/api/v2/topcoder?handle=" + word,
@@ -63,7 +67,7 @@
               success: function (data) {
                 var result = [];
                 $.each(data, function (i, item) {
-                  result.push({text:'@' + data[i].handle, displayText: data[i].handle+ "("+ data[i].firstName + ' ' + data[i].lastName +")",
+                  result.push({text: data[i].handle, displayText: data[i].handle+ "("+ data[i].firstName + ' ' + data[i].lastName +")",
                     className: 'Username'});
                 });
                 return accept({
@@ -93,12 +97,24 @@
     }
 
     function completeAfter(cm, pred) {
-      if (!pred || pred()) {
+       if (!pred || pred()) {
         setTimeout(function () {
           if (!cm.state.completionActive) {
-            cm.showHint({ completeSingle: false, alignWithWord: true });
+            var currentLine = cm.getCursor().line;
+            if (cm.getCursor().ch === 0) {
+              cm.replaceSelection("@");
+              cm.showHint({ completeSingle: false, alignWithWord: true });
+            } else {
+              var from = { line: cm.getCursor().line, ch: 0};
+              var to = cm.getCursor()
+              var line = cm.getRange(from , to);
+              var lastIndexOf = line.lastIndexOf(' ');
+              var tokenIndex = lastIndexOf > -1 ?  lastIndexOf+1 : 0;
+              cm.replaceRange("@", {line: cm.getCursor().line, ch: tokenIndex});
+              cm.showHint({ completeSingle: false, alignWithWord: true });
+            }
           }
-        }, 100);
+        }, 500);
       }
       return CodeMirror.Pass;
     }
@@ -116,7 +132,6 @@
         var editor = new EasyMDE({
           shortcuts: {
             "mentions":"Ctrl-Space",
-            "mentions":"'@'"
           },
           autofocus: false,
           forceSync: true, // true, force text changes made in EasyMDE to be immediately stored in original text area.
@@ -153,12 +168,36 @@
           // showIcons: An array of icon names to show. Can be used to show specific icons hidden by default without completely customizing the toolbar.
           // sideBySideFullscreen: If set to false, allows side-by-side editing without going into fullscreen. Defaults to true.
           //theme: Override the theme. Defaults to easymde.
-
         });
 
         // forceSync = true, need to clear form after async requests
         $currentEditableTextarea.closest('form').on('complete', function(frm, btn) {
           editor.codemirror.setValue('');
+        });
+
+        editor.codemirror.on('change', function (cm, changeObj){
+           // logMessage('onChange:'+cm.getCursor().ch);
+        });
+
+        editor.codemirror.on('keydown', function (cm, event){
+          if (!cm.state.completionActive /*Enables keyboard navigation in autocomplete list*/) {
+            if(event.key == '@') {
+              var currentCursorPosition = cm.getCursor();
+              if(currentCursorPosition.ch === 0) {
+                cm.showHint({ completeSingle: false, alignWithWord: true });
+                return;
+              }
+
+              var backwardCursorPosition = {
+                line: currentCursorPosition.line,
+                ch: currentCursorPosition.ch - 1
+              };
+              var backwardCharacter = cm.getRange(backwardCursorPosition, currentCursorPosition);
+              if (backwardCharacter === ' ') { // space
+                cm.showHint({ completeSingle: false, alignWithWord: true });
+              }
+            }
+          }
         });
       }
     } //editorInit
