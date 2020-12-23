@@ -1,7 +1,15 @@
 <?php
 
+if (!class_exists('League\HTMLToMarkdown\HtmlConverter')){
+    require __DIR__ . '/vendor/autoload.php';
+}
+
+
 use Vanilla\Formatting\Formats\MarkdownFormat;
 use \Vanilla\Formatting\Formats;
+use Vanilla\Formatting\Formats\RichFormat;
+use League\HTMLToMarkdown\HtmlConverter;
+
 
 /**
  * Plugin class for the Topcoder Editor
@@ -74,16 +82,11 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $sender->addJsFile('topcodereditor.js', 'plugins/TopcoderEditor');
         $c = Gdn::controller();
 
-        // Set definitions for JavaScript to read
-        $c->addDefinition('editorVersion', $this->pluginInfo['Version']);
-        $c->addDefinition('editorInputFormat', $this->Format);
-        $c->addDefinition('editorPluginAssets', $this->AssetPath);
+        // Set formats
+        $c->addDefinition('defaultInputFormat', c('Garden.InputFormatter'));
+        $c->addDefinition('defaultMobileInputFormat', c('Garden.MobileInputFormatter'));
 
-        $additionalDefinitions = [];
-        $this->EventArguments['definitions'] = &$additionalDefinitions;
-        $this->fireEvent('GetJSDefinitions');
-
-        // Set variables for file uploads
+        // Set file uploads vars
         $postMaxSize = Gdn_Upload::unformatFileSize(ini_get('post_max_size'));
         $fileMaxSize = Gdn_Upload::unformatFileSize(ini_get('upload_max_filesize'));
         $configMaxSize = Gdn_Upload::unformatFileSize(c('Garden.Upload.MaxFileSize', '1MB'));
@@ -99,6 +102,16 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $c->addDefinition('allowedFileExtensions', json_encode($allowedFileExtensions));
         // Get max file uploads, to be used for max drops at once.
         $c->addDefinition('maxFileUploads', ini_get('max_file_uploads'));
+
+        // Set editor definitions
+        $c->addDefinition('editorVersion', $this->pluginInfo['Version']);
+        $c->addDefinition('editorInputFormat', ucfirst(self::FORMAT_NAME));
+        $c->addDefinition('editorPluginAssets', $this->AssetPath);
+
+        $additionalDefinitions = [];
+        $this->EventArguments['definitions'] = &$additionalDefinitions;
+        $this->fireEvent('GetJSDefinitions');
+
     }
 
     /**
@@ -141,6 +154,19 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         return strcasecmp($format, MarkdownFormat::FORMAT_KEY) === 0;
     }
 
+    /**
+     * Check to see if we should be using the Topcoder Editor
+     *
+     * @param Gdn_Form $form - A form instance.
+     *
+     * @return bool
+     */
+    public function isFormWysiwyg(Gdn_Form $form): bool {
+        $data = $form->formData();
+        $format = $data['Format'] ?? null;
+        return strcasecmp($format, Vanilla\Formatting\Formats\WysiwygFormat::FORMAT_KEY) === 0;
+    }
+
     public function isInputFormatterMarkDown(): bool {
         return strcasecmp(Gdn_Format::defaultFormat(), MarkdownFormat::FORMAT_KEY) === 0;
     }
@@ -157,6 +183,17 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         return $postFormats;
     }
 
+    public function postController_beforeEditDiscussion_handler($sender, $args) {
+        $discussion = &$args['Discussion'];
+        if($discussion) {
+            if (strcasecmp($discussion->Format, Vanilla\Formatting\Formats\WysiwygFormat::FORMAT_KEY) === 0) {
+                $converter = new HtmlConverter();
+                $discussion->Body = $converter->convert($discussion->Body) ;
+                $discussion->Format = 'Markdown';
+            }
+        }
+    }
+
     /**
      * Attach editor anywhere 'BodyBox' is used.
      *
@@ -170,11 +207,13 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         if (val('Attributes', $args)) {
             $attributes = val('Attributes', $args);
         }
+        /** @var Gdn_Controller $controller */
+        $controller = Gdn::controller();
+        $data = $sender->formData();
+        $controller->addDefinition('originalFormat', $data['Format']);
 
-        if ($this->isFormMarkDown($sender)) {
-            /** @var Gdn_Controller $controller */
-            $controller = Gdn::controller();
-            $controller->CssClass .= ' hasTopcoderEditor';
+        if ($this->isFormMarkDown($sender) || $this->isFormWysiwyg($sender) ) {
+            $controller->CssClass .= 'hasRichEditor hasTopcoderEditor'; // hasRichEditor = to support Rich editor
 
             $editorID = $this->getEditorID();
 
@@ -194,8 +233,8 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
             $originalRecord = $sender->formData();
             $newBodyValue = null;
             $body = $originalRecord['Body'] ?? false;
-            $originalFormat = $originalRecord['Format'] ?? false;
-
+            $originalRecord = $sender->formData();
+            $originalFormat = $originalRecord['Format']? strtolower($originalRecord['Format']) : false;
             /*
                 Allow rich content to be rendered and modified if the InputFormat
                 is different from the original format in no longer applicable or
@@ -205,6 +244,10 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
                 switch (strtolower(c('Garden.InputFormatter', 'unknown'))) {
                     case Formats\TextFormat::FORMAT_KEY:
                     case Formats\TextExFormat::FORMAT_KEY:
+                        $newBodyValue = $this->formatService->renderPlainText($body, Formats\TextFormat::FORMAT_KEY);
+                        $sender->setValue("Body", $newBodyValue);
+                        break;
+                    case Formats\RichFormat::FORMAT_KEY:
                         $newBodyValue = $this->formatService->renderPlainText($body, Formats\RichFormat::FORMAT_KEY);
                         $sender->setValue("Body", $newBodyValue);
                         break;
@@ -212,7 +255,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
                         // Do nothing
                         break;
                     default:
-                        $newBodyValue = $this->formatService->renderHTML($body, Formats\HtmlFormat::FORMAT_KEY);
+                        $newBodyValue = $this->formatService->renderPlainText($body, Formats\HtmlFormat::FORMAT_KEY);
                         $sender->setValue("Body", $newBodyValue);
                 }
             }
@@ -281,7 +324,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
      *
      * @return string The built up form html
      */
-    public function postingSettings_formatSpecificFormItems_handler(
+    public function postingSettings_formatSpecificFormItems_handler1(
         string $additionalFormItemHTML,
         Gdn_Form $form,
         Gdn_ConfigurationModel $configModel
