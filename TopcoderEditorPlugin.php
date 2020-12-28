@@ -91,15 +91,26 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $fileMaxSize = Gdn_Upload::unformatFileSize(ini_get('upload_max_filesize'));
         $configMaxSize = Gdn_Upload::unformatFileSize(c('Garden.Upload.MaxFileSize', '1MB'));
         $maxSize = min($postMaxSize, $fileMaxSize, $configMaxSize);
+        //TODO: remove
+        $maxSize = Gdn_Upload::unformatFileSize('1MB');
         $c->addDefinition('maxUploadSize', $maxSize);
 
         // Save allowed file types
-        // TODO: upload files
         $allowedFileExtensions = c('Garden.Upload.AllowedFileExtensions');
         $imageExtensions = ['gif', 'png', 'jpeg', 'jpg', 'bmp', 'tif', 'tiff', 'svg'];
         $allowedImageExtensions = array_intersect($allowedFileExtensions, $imageExtensions);
-        $c->addDefinition('allowedImageExtensions', json_encode($allowedImageExtensions));
-        $c->addDefinition('allowedFileExtensions', json_encode($allowedFileExtensions));
+        $c->addDefinition('allowedImageExtensions', json_encode(array_values($allowedImageExtensions)));
+        $c->addDefinition('allowedFileExtensions', json_encode( $allowedFileExtensions));
+
+        // Save allowed mime types
+        $allowedFileMimeTypes = [];
+        foreach($allowedFileExtensions as $ext) {
+            if ($mime = $this->lookupMime($ext)) {
+                $allowedFileMimeTypes = array_merge($allowedFileMimeTypes, $mime);
+            }
+        }
+        $c->addDefinition('allowedFileMimeTypes', implode(',', $allowedFileMimeTypes));
+
         // Get max file uploads, to be used for max drops at once.
         $c->addDefinition('maxFileUploads', ini_get('max_file_uploads'));
 
@@ -211,21 +222,21 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $controller = Gdn::controller();
         $data = $sender->formData();
         $controller->addDefinition('originalFormat', $data['Format']);
+        $controller->addDefinition('canUpload', $this->canUpload());
+
 
         if ($this->isFormMarkDown($sender) || $this->isFormWysiwyg($sender) ) {
             $controller->CssClass .= 'hasRichEditor hasTopcoderEditor'; // hasRichEditor = to support Rich editor
 
             $editorID = $this->getEditorID();
 
-            $editorToolbar = $this->getEditorToolbar($attributes);
-            //$this->EventArguments['EditorToolbar'] = &$editorToolbar;
-            //$this->fireEvent('InitTopcoderEditorToolbar');
+            // $editorToolbar = $this->getEditorToolbar($attributes);
+            // $this->EventArguments['EditorToolbar'] = &$editorToolbar;
+            // $this->fireEvent('InitTopcoderEditorToolbar');
 
-            $controller->addDefinition('topcoderEditorToolbar', $editorToolbar);
             $controller->setData('topcoderEditorData', [
                 'editorID' => $editorID,
-                'editorDescriptionID' => 'topcoderEditor-'.$editorID.'-description',
-                'hasUploadPermission' => checkPermission('uploads.add'),
+                'editorDescriptionID' => 'topcoderEditor-'.$editorID.'-description'
             ]);
             // Render the editor view.
             $args['BodyBox'] .= $controller->fetchView('editor', '', 'plugins/TopcoderEditor');
@@ -316,128 +327,6 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
     }
 
     /**
-     * Add additional WYSIWYG specific form item to the dashboard posting page.
-     *
-     * @param string $additionalFormItemHTML
-     * @param Gdn_Form $form The Form instance from the page.
-     * @param Gdn_ConfigurationModel $configModel The config model used for the Form.
-     *
-     * @return string The built up form html
-     */
-    public function postingSettings_formatSpecificFormItems_handler1(
-        string $additionalFormItemHTML,
-        Gdn_Form $form,
-        Gdn_ConfigurationModel $configModel
-    ): string {
-        $enableTopcoderEditorQuotes = t('Enable Topcoder Quotes');
-        $richEditorQuotesNotes =  t('TopcoderEditor.QuoteEnable.Notes', 'Use the following option to enable quotes for the Topcoder Editor. This will only apply if the default formatter is "Markdown".');
-        $label = '<p class="info">'.$richEditorQuotesNotes.'</p>';
-        $configModel->setField(self::QUOTE_CONFIG_ENABLE);
-
-        $form->setValue(self::QUOTE_CONFIG_ENABLE, c(self::QUOTE_CONFIG_ENABLE));
-        $formToggle = $form->toggle(self::QUOTE_CONFIG_ENABLE, $enableTopcoderEditorQuotes, [], $label);
-
-        $additionalFormItemHTML .= "<li class='form-group js-richFormGroup Hidden' data-formatter-type='Rich'>$formToggle</li>";
-        return $additionalFormItemHTML;
-    }
-
-
-    /**
-     * This method will grab the permissions array from getAllowedEditorActions,
-     * build the editor toolbar, then filter out the allowed ones and return it.
-     *
-     * @param array $editorToolbar Holds the final copy of allowed editor actions
-     * @param array $editorToolbarAll Holds the "kitchen sink" of editor actions
-     * @return array Returns the array of allowed editor toolbar actions
-     */
-    protected function getEditorToolbar($attributes = []) {
-        $defaultEditorToolbar = [
-            "bold",
-            "italic",
-            "strikethrough",
-            "|",
-            "heading-1",
-            "heading-2",
-            "heading-3",
-            "|",
-            "code",
-            "quote",
-            "|",
-            "unordered-list",
-            "ordered-list",
-            "clean-block",
-            "|",
-            "mentions",
-            "link",
-            "image",
-            "table",
-            "horizontal-rule",
-            "|",
-            "fullscreen",
-            "|" ,
-            "guide"
-        ];
-        $allowedEditorActions = $this->getAllowedEditorActions();
-
-        // TODO : allowed actions
-        $fileUpload = val('FileUpload', $attributes);
-        $imageUpload = $fileUpload || val('ImageUpload', $attributes, true);
-        if (($fileUpload || $imageUpload) && $this->canUpload()) {
-            $allowedEditorActions['fileupload'] = $fileUpload;
-            $allowedEditorActions['imageupload'] = $imageUpload;
-            $allowedEditorActions['image'] = !$imageUpload;
-        }
-
-        // Let plugins and themes override the defaults.
-        $this->EventArguments['actions'] = &$allowedEditorActions;
-        $this->fireEvent('topcoderToolbarConfig');
-
-        // Filter out disallowed editor actions
-        foreach ($allowedEditorActions as $editorAction => $allowed) {
-            if ($allowed == false && isset($defaultEditorToolbar[$editorAction])) {
-                //$editorToolbar[$editorAction] = $editorToolbarAll[$editorAction];
-                unset($defaultEditorToolbar[$editorAction]);
-            }
-        }
-
-        return $defaultEditorToolbar;
-    }
-
-
-    /**
-     * Set the editor actions to true or false to enable or disable the action
-     * from displaying in the editor toolbar.
-     *
-     * This will also let you toggle the separators from appearing between the loosely grouped actions.
-     *
-     * @return array List of allowed editor actions
-     */
-    public function getAllowedEditorActions() {
-        static $allowedEditorActions = [
-            "bold" => true,
-            "italic" => true,
-            "strikethrough" => true,
-            "heading-1" => true,
-            "heading-2" => true,
-            "heading-3" => true,
-            "code" => true,
-            "quote" => true,
-            "unordered-list" => true,
-            "ordered-list" => true,
-            "clean-block" => true,
-            "mentions" => true,
-            "link" => true,
-            "image" => true,
-            "table" => true,
-            "horizontal-rule" => true,
-            "fullscreen" =>true,
-            "guide" =>true
-        ];
-
-        return $allowedEditorActions;
-    }
-
-    /**
      * Checks whether the canUpload property is set and if not, calculates it value.
      * The calculation is based on config, user permissions, and category permissions.
      *
@@ -449,7 +338,8 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
             return $this->canUpload;
         } else {
             // Check config and user role upload permission
-            if (c('Garden.AllowFileUploads', true) && Gdn::session()->checkPermission('Plugins.Attachments.Upload.Allow', false)) {
+            if (c('Garden.AllowFileUploads', true) &&
+                Gdn::session()->checkPermission('Garden.Uploads.Add', false)) {
                 // Check category-specific permission
                 $permissionCategory = CategoryModel::permissionCategory(Gdn::controller()->data('Category'));
                 $this->canUpload = val('AllowFileUploads', $permissionCategory, true);
@@ -458,6 +348,18 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
             }
         }
         return $this->canUpload;
+    }
+
+    /**
+     * Retrieve mime type from file extension.
+     *
+     * @param string $extension The extension to look up. (i.e., 'png')
+     * @return bool|string The mime type associated with the file extension or false if it doesn't exist.
+     */
+    private function lookupMime($extension){
+        global $mimeTypes;
+        include_once 'mimetypes.php';
+        return val($extension, $mimeTypes, false);
     }
 
     public static function log($message, $data= []) {

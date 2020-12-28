@@ -1491,8 +1491,8 @@ var toolbarBuiltInButtons = {
     'upload-image': {
         name: 'upload-image',
         action: drawUploadedImage,
-        className: 'fa fa-image',
-        title: 'Import an image',
+        className: 'fa fa-upload',
+        title: 'Upload a file',
     },
     'table': {
         name: 'table',
@@ -1868,7 +1868,7 @@ EasyMDE.prototype.uploadImagesUsingCustomFunction = function (imageUploadFunctio
         names.push(files[i].name);
         this.uploadImageUsingCustomFunction(imageUploadFunction, files[i]);
     }
-    this.updateStatusBar('upload-image', this.options.imageTexts.sbOnDrop.replace('#images_names#', names.join(', ')));
+    // this.updateStatusBar('upload-image', this.options.imageTexts.sbOnDrop.replace('#images_names#', names.join(', ')));
 };
 
 /**
