@@ -91,8 +91,6 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $fileMaxSize = Gdn_Upload::unformatFileSize(ini_get('upload_max_filesize'));
         $configMaxSize = Gdn_Upload::unformatFileSize(c('Garden.Upload.MaxFileSize', '1MB'));
         $maxSize = min($postMaxSize, $fileMaxSize, $configMaxSize);
-        //TODO: remove
-        $maxSize = Gdn_Upload::unformatFileSize('1MB');
         $c->addDefinition('maxUploadSize', $maxSize);
 
         // Save allowed file types
