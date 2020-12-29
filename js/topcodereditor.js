@@ -160,10 +160,10 @@
         var errorMessages = '<div class="Messages Errors"><ul>'
         if(response.errors) {
           for (var error of response.errors) {
-            errorMessages += '<li>' + ucfirst(error.message) + '</li>'
+            errorMessages += '<li>Couldn\'t upload '+ file.name +'. '+ ucfirst(error.message) + '</li>'
           }
         } else {
-          errorMessages += '<li>'+ ucfirst(response.message) + '</li>';
+          errorMessages += '<li>Couldn\'t upload '+ file.name+ '. '+ ucfirst(response.message) + '</li>';
         }
         errorMessages +='</ul></div>';
         return errorMessages;
@@ -173,8 +173,9 @@
       function fillErrorMessage(errorMessage) {
         var units = self.options.imageTexts.sizeUnits.split(',');
 
+
         var error =  errorMessage
-          .replace('#image_type#', file.type)
+          .replace('#image_type#', getFileType())
           .replace('#image_name#', file.name)
           .replace('#image_size#', humanFileSize(file.size, units))
           .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
@@ -188,16 +189,21 @@
         position.end = end;
       }
 
+      function getFileType() {
+         // Sometimes a browser couldn't define mime/types, use file extension
+         return file.type? file.type: file.name.substring(file.name.lastIndexOf('.') + 1);
+      }
+
+      // Check mime types
+      if (!this.options.imageAccept.includes(getFileType())) {
+         onErrorSup(fillErrorMessage(this.options.errorMessages.typeNotAllowed));
+          return;
+      }
+
       // Check max file size before uploading
       if (file.size > this.options.imageMaxSize) {
          onErrorSup(fillErrorMessage(this.options.errorMessages.fileTooLarge));
          return;
-      }
-
-      // Check mime types
-      if(!this.options.imageAccept.includes(file.type)){
-        onErrorSup(fillErrorMessage(this.options.errorMessages.typeNotAllowed));
-        return;
       }
 
       beforeUploadingFile(self, file, onPosition);
@@ -453,11 +459,17 @@
       logMessage('MediaIDs='+mediaIDs);
     }
 
-    function showErrorMessage(editor, errorMessage) {
-      var $element = editor.element;
-      var postForm = $($element.closest('form'));
+    function beforeUploadingImages(files) {
+      var self = this;
+      var $element = self.element;
+      var postForm = $element.closest('form');
       // Remove any old errors from the form
       $(postForm).find('div.Errors').remove();
+    }
+
+    function showErrorMessage(editor, errorMessage) {
+      var $element = editor.element;
+      var postForm = $element.closest('form');
       $(postForm).prepend(errorMessage);
     }
 
@@ -547,13 +559,14 @@
              imageMaxSize: maxUploadSize, //Maximum image size in bytes
              imageAccept: allowedFileMimeTypes, //A comma-separated list of mime-types
              imageUploadFunction: customUploadImage,
+             beforeUploadingImagesFunction: beforeUploadingImages,
              errorCallback:  errorCallback,// A callback function used to define how to display an error message.
              errorMessages: {
                noFileGiven: 'Select a file.',
-               typeNotAllowed: 'The file type (#image_type#) is not supported.',
-               fileTooLarge: 'File #image_name# is too big (#image_size#).\n' +
+               typeNotAllowed: 'Uploading #image_name# was failed. The file type (#image_type#) is not supported.',
+               fileTooLarge: 'Uploading #image_name# was failed. The file is too big (#image_size#).\n' +
                  'Maximum file size is #image_max_size#.',
-               importError: 'Something went wrong when uploading the file #image_name#.',
+               importError: 'Uploading #image_name# was failed. Something went wrong when uploading the file.',
              }
           });
 
