@@ -138,7 +138,7 @@
 
       onError = function onError(errorMessage) {
         showErrorMessage(self,errorMessage)
-        if(position) {
+        if(position && position.start && position.end) {
           self.codemirror.replaceRange("", position.start, position.end);
         }
       }
