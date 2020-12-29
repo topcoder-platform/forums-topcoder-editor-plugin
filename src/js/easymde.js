@@ -1842,6 +1842,9 @@ EasyMDE.prototype.uploadImages = function (files, onSuccess, onError) {
       return;
     }
     var names = [];
+    if (this.options.beforeUploadingImagesFunction) {
+        this.options.beforeUploadingImagesFunction.apply(this, [files]);
+    }
     for (var i = 0; i < files.length; i++) {
         names.push(files[i].name);
         this.uploadImage(files[i], onSuccess, onError);
@@ -1862,6 +1865,9 @@ EasyMDE.prototype.uploadImages = function (files, onSuccess, onError) {
 EasyMDE.prototype.uploadImagesUsingCustomFunction = function (imageUploadFunction, files) {
     if (files.length === 0) {
       return;
+    }
+    if (this.options.beforeUploadingImagesFunction) {
+        this.options.beforeUploadingImagesFunction.apply(this, [files]);
     }
     var names = [];
     for (var i = 0; i < files.length; i++) {
