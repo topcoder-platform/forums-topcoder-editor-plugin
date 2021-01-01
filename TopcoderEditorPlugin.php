@@ -80,6 +80,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $sender->addJsFile('codemirror.js', 'plugins/TopcoderEditor');
         $sender->addJsFile('easymde.min.js', 'plugins/TopcoderEditor');
         $sender->addJsFile('topcodereditor.js', 'plugins/TopcoderEditor');
+        $sender->addJsFile('topcodereditor.mathjax.js', 'plugins/TopcoderEditor', ['defer'=>'defer']);
         $c = Gdn::controller();
 
         // Set formats
