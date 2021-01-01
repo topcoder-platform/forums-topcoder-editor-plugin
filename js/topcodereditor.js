@@ -612,4 +612,18 @@
     // Multiple editors are supported on a page
     $('.BodyBox[format="Markdown"], .BodyBox[format="wysiwyg"],.js-bodybox[format="Markdown"], .js-bodybox[format="wysiwyg"]', e.target).setAsEditor();
   });
+
+  // Preview mode
+  $(document).on('PreviewLoaded',function(ev) {
+    if(MathJax) {
+      MathJax.typeset();
+    }
+  });
+
+  // Comment was added\edited
+  $(document).on('CommentAdded',function(ev) {
+    if(MathJax) {
+      MathJax.typeset();
+    }
+  });
 }(jQuery));
