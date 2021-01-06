@@ -129,7 +129,7 @@
       return CodeMirror.Pass;
     }
 
-    function clearInputFile(editor){
+    function resetFileInput(editor){
       var imageInput = editor.gui.toolbar.getElementsByClassName('imageInput')[0];
       imageInput.value ='';
     }
@@ -141,7 +141,7 @@
       onSuccess = function onSuccess(jsonData) {
         updateMediaIDs(self, jsonData);
         afterFileUploaded(self, jsonData, position);
-        clearInputFile(self);
+        resetFileInput(self);
       };
 
       onError = function onError(errorMessage) {
@@ -149,7 +149,7 @@
         if(position && position.start && position.end) {
           self.codemirror.replaceRange("", position.start, position.end);
         }
-        clearInputFile(self);
+        resetFileInput(self);
       }
 
       function onErrorSup(errorMessage) {
