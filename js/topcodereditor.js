@@ -21,6 +21,7 @@
     var allowedImageExtensions = gdn.definition('allowedImageExtensions');
     var allowedFileExtensions = gdn.definition('allowedFileExtensions');
     var allowedFileMimeTypes = gdn.definition('allowedFileMimeTypes');
+    var allowedFileMimeTypeWithExts = gdn.definition('allowedFileMimeTypeWithExts');
     var maxFileUploads = gdn.definition('maxFileUploads');
     var debug = false;
 
@@ -29,6 +30,7 @@
     logMessage('allowedImageExtensions:' + allowedImageExtensions);
     logMessage('allowedFileExtensions:' + allowedFileExtensions);
     logMessage('allowedFileMimeTypes:' + allowedFileMimeTypes);
+    logMessage('allowedFileMimeTypeWithExts:' + allowedFileMimeTypeWithExts);
     logMessage('maxFileUploads:' + maxFileUploads);
 
     function logMessage(message) {
@@ -127,6 +129,11 @@
       return CodeMirror.Pass;
     }
 
+    function resetFileInput(editor){
+      var imageInput = editor.gui.toolbar.getElementsByClassName('imageInput')[0];
+      imageInput.value ='';
+    }
+
     function customUploadImage(file, onSuccess, onError) {
       var self = this;
       var position = {};
@@ -134,13 +141,15 @@
       onSuccess = function onSuccess(jsonData) {
         updateMediaIDs(self, jsonData);
         afterFileUploaded(self, jsonData, position);
+        resetFileInput(self);
       };
 
       onError = function onError(errorMessage) {
-        showErrorMessage(self,errorMessage)
+        showErrorMessage(self,errorMessage);
         if(position && position.start && position.end) {
           self.codemirror.replaceRange("", position.start, position.end);
         }
+        resetFileInput(self);
       }
 
       function onErrorSup(errorMessage) {
@@ -233,12 +242,13 @@
         if (this.status === 201 && response && !response.error && response.mediaID > 0 && response.size > 0) {
           onSuccess(response);
         } else {
-          if (response.errors) {  // server side generated error message
+          if (response.errors || response.message) {  // server side generated error message
             onErrorSup(parseServerErrors(response));
-          } else {  //unknown error
-            console.error('EasyMDE: Received an unexpected response after uploading the image.'
-              + this.status + ' (' + this.statusText + ')');
-            onErrorSup(fillErrorMessage(self.options.errorMessages.importError));
+          } else {
+              //unknown error
+              console.error('EasyMDE: Received an unexpected response after uploading the image.'
+                + this.status + ' (' + this.statusText + ')');
+              onErrorSup(fillErrorMessage(self.options.errorMessages.importError));
           }
         }
       };
@@ -555,9 +565,9 @@
               sbOnUploaded: 'Uploaded #image_name#',
               sizeUnits: ' B, KB, MB',
              },
-             uploadImage: true,
+             uploadImage: canUpload,
              imageMaxSize: maxUploadSize, //Maximum image size in bytes
-             imageAccept: allowedFileMimeTypes, //A comma-separated list of mime-types
+             imageAccept: allowedFileMimeTypeWithExts, //A comma-separated list of mime-types and extensions
              imageUploadFunction: customUploadImage,
              beforeUploadingImagesFunction: beforeUploadingImages,
              errorCallback:  errorCallback,// A callback function used to define how to display an error message.
