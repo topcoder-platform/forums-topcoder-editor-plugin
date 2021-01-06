@@ -96,7 +96,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
 
         // Save allowed file types
         $allowedFileExtensions = c('Garden.Upload.AllowedFileExtensions');
-        $imageExtensions = ['gif', 'png', 'jpeg', 'jpg', 'bmp', 'tif', 'tiff', 'svg'];
+        $imageExtensions = ['gif', 'png', 'jpeg', 'jpg', 'bmp', 'svg'];
         $allowedImageExtensions = array_intersect($allowedFileExtensions, $imageExtensions);
         $c->addDefinition('allowedImageExtensions', json_encode(array_values($allowedImageExtensions)));
         $c->addDefinition('allowedFileExtensions', json_encode( $allowedFileExtensions));
@@ -109,6 +109,8 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
             }
         }
         $c->addDefinition('allowedFileMimeTypes', implode(',', $allowedFileMimeTypes));
+        $c->addDefinition('allowedFileMimeTypeWithExts', implode(',', $allowedFileMimeTypes).','.implode(',',
+                array_map(function($val) { return '.'.$val; }, $allowedFileExtensions)));
 
         // Get max file uploads, to be used for max drops at once.
         $c->addDefinition('maxFileUploads', ini_get('max_file_uploads'));

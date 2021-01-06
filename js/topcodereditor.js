@@ -21,6 +21,7 @@
     var allowedImageExtensions = gdn.definition('allowedImageExtensions');
     var allowedFileExtensions = gdn.definition('allowedFileExtensions');
     var allowedFileMimeTypes = gdn.definition('allowedFileMimeTypes');
+    var allowedFileMimeTypeWithExts = gdn.definition('allowedFileMimeTypeWithExts');
     var maxFileUploads = gdn.definition('maxFileUploads');
     var debug = false;
 
@@ -29,6 +30,7 @@
     logMessage('allowedImageExtensions:' + allowedImageExtensions);
     logMessage('allowedFileExtensions:' + allowedFileExtensions);
     logMessage('allowedFileMimeTypes:' + allowedFileMimeTypes);
+    logMessage('allowedFileMimeTypeWithExts:' + allowedFileMimeTypeWithExts);
     logMessage('maxFileUploads:' + maxFileUploads);
 
     function logMessage(message) {
@@ -557,7 +559,7 @@
              },
              uploadImage: true,
              imageMaxSize: maxUploadSize, //Maximum image size in bytes
-             imageAccept: allowedFileMimeTypes, //A comma-separated list of mime-types
+             imageAccept: allowedFileMimeTypeWithExts, //A comma-separated list of mime-types and extensions
              imageUploadFunction: customUploadImage,
              beforeUploadingImagesFunction: beforeUploadingImages,
              errorCallback:  errorCallback,// A callback function used to define how to display an error message.
