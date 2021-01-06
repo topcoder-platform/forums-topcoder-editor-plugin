@@ -235,12 +235,13 @@
         if (this.status === 201 && response && !response.error && response.mediaID > 0 && response.size > 0) {
           onSuccess(response);
         } else {
-          if (response.errors) {  // server side generated error message
+          if (response.errors || response.message) {  // server side generated error message
             onErrorSup(parseServerErrors(response));
-          } else {  //unknown error
-            console.error('EasyMDE: Received an unexpected response after uploading the image.'
-              + this.status + ' (' + this.statusText + ')');
-            onErrorSup(fillErrorMessage(self.options.errorMessages.importError));
+          } else {
+              //unknown error
+              console.error('EasyMDE: Received an unexpected response after uploading the image.'
+                + this.status + ' (' + this.statusText + ')');
+              onErrorSup(fillErrorMessage(self.options.errorMessages.importError));
           }
         }
       };
@@ -557,7 +558,7 @@
               sbOnUploaded: 'Uploaded #image_name#',
               sizeUnits: ' B, KB, MB',
              },
-             uploadImage: true,
+             uploadImage: canUpload,
              imageMaxSize: maxUploadSize, //Maximum image size in bytes
              imageAccept: allowedFileMimeTypeWithExts, //A comma-separated list of mime-types and extensions
              imageUploadFunction: customUploadImage,
