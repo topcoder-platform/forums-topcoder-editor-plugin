@@ -510,6 +510,16 @@
             editor.codemirror.setValue('');
           });
 
+          editor.codemirror.on('change', function (cm, event) {
+            // Key events don't work properly on Android Chrome
+            if (!cm.state.completionActive /*Enables keyboard navigation in autocomplete list*/) {
+                if (event.origin == '+input' && event.text && event.text.length > 0 && event.text[0] === '@') {
+                  cm.showHint({ completeSingle: false, alignWithWord: true });
+                  return;
+              }
+            }
+          });
+
           editor.codemirror.on('keydown', function (cm, event) {
             if (!cm.state.completionActive /*Enables keyboard navigation in autocomplete list*/) {
               if (event.key == '@') {
