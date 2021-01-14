@@ -6,38 +6,12 @@
     $('body').addClass('topcodereditor-active');
 
     /**
-     * Determine editor format to load, and asset path, default to Wysiwyg
+     * Determine editor settings
      */
-    var editor,
-      editorCacheBreakValue = Math.random(),
-      editorVersion = gdn.definition('editorVersion', editorCacheBreakValue),
-      defaultInputFormat = gdn.definition('defaultInputFormat', 'Markdown'),
-      defaultMobileInputFormat = gdn.definition('defaultMobileInputFormat', 'Markdown'),
-      editorInputFormat = gdn.definition('editorInputFormat', 'Markdown'),
-      topcoderEditorToolbar = gdn.definition('topcoderEditorToolbar');
-
     var canUpload = (gdn.definition('canUpload', false)) ? 1 : 0;
     var maxUploadSize = gdn.definition('maxUploadSize');
     var allowedImageExtensions = gdn.definition('allowedImageExtensions');
-    var allowedFileExtensions = gdn.definition('allowedFileExtensions');
-    var allowedFileMimeTypes = gdn.definition('allowedFileMimeTypes');
     var allowedFileMimeTypeWithExts = gdn.definition('allowedFileMimeTypeWithExts');
-    var maxFileUploads = gdn.definition('maxFileUploads');
-    var debug = false;
-
-    logMessage('topcoderEditorData:' + JSON.stringify(topcoderEditorToolbar));
-    logMessage('maxUploadSize:' + maxUploadSize);
-    logMessage('allowedImageExtensions:' + allowedImageExtensions);
-    logMessage('allowedFileExtensions:' + allowedFileExtensions);
-    logMessage('allowedFileMimeTypes:' + allowedFileMimeTypes);
-    logMessage('allowedFileMimeTypeWithExts:' + allowedFileMimeTypeWithExts);
-    logMessage('maxFileUploads:' + maxFileUploads);
-
-    function logMessage(message) {
-      if (debug) {
-        console.log('TopcoderEditorPlugin::'+ message);
-      }
-    }
 
     /**
      * Convert the first char to Uppercase
@@ -62,7 +36,6 @@
           while (start && /\w/.test(line.charAt(start - 1))) --start
           while (end < line.length && /\w/.test(line.charAt(end))) ++end
           var word = line.slice(start, end).toLowerCase();
-          //logMessage('word' + word + ', length:' + word.length);
           if(word.length > 1) {
             $.ajax({
               type: "GET",
@@ -139,7 +112,6 @@
       var position = {};
 
       onSuccess = function onSuccess(jsonData) {
-        updateMediaIDs(self, jsonData);
         afterFileUploaded(self, jsonData, position);
         resetFileInput(self);
       };
@@ -157,7 +129,6 @@
         self.updateStatusBar('upload-image', self.options.imageTexts.sbInit);
         // run custom error handler
         if (onError && typeof onError === 'function') {
-          //onError(errorMessage);
           onError(errorMessage);
         }
         // run error handler from options
@@ -454,19 +425,7 @@
         // Set a cursor at the end of line
         cm.setSelection(startPoint, endPoint);
       }
-      logMessage('position: file' + data.name +':' + JSON.stringify(startPoint) + ' , '+ JSON.stringify(endPoint));
-      logMessage('line: getCursor:' + cm.getCursor().line);
-
       cm.focus();
-      logMessage('after focus: getCursor:' + cm.getCursor().line);
-    }
-
-    function updateMediaIDs(editor, jsonData) {
-      var $element = editor.element;
-      var postForm = $($element.closest('form'));
-      $(postForm).append('<input type="hidden" id="Form_MediaIDs" name="MediaIDs[]" value="'+jsonData.mediaID+'"/>');
-      var mediaIDs = $(postForm).find('input[name="MediaIDs[]"]');
-      logMessage('MediaIDs='+mediaIDs);
     }
 
     function beforeUploadingImages(files) {
@@ -489,40 +448,6 @@
      */
     var editorInit = function (textareaObj) {
         var $currentEditableTextarea = $(textareaObj);
-        var $postForm = $(textareaObj).closest('form');
-        var currentFormFormat = $postForm.find('input[name="Format"]');
-        var currentTextBoxWrapper; // div wrapper
-
-        if (currentFormFormat.length) {
-          currentFormFormat = currentFormFormat[0].value.toLowerCase();
-        }
-
-        logMessage('The default format is '+ editorInputFormat);
-        logMessage('The form format is '+ JSON.stringify(currentFormFormat));
-
-        currentTextBoxWrapper = $currentEditableTextarea.parent('.TextBoxWrapper');
-        // If singleInstance is false, then odds are the editor is being
-        // loaded inline and there are other instances on page.
-        var singleInstance = true;
-
-        // Determine if editing a comment, or not. When editing a comment,
-        // it has a comment id, while adding a new comment has an empty
-        // comment id. The value is a hidden input.
-        var commentId = $postForm.find('#Form_CommentID').val();
-        var discussionId = $postForm.find('#Form_DiscussionID').val();
-        var formConversationId = $postForm.find('#Form_ConversationID').val();
-        var draftId = $postForm.find('#Form_DraftID').val();
-
-        logMessage('DiscussionID=' + discussionId);
-        logMessage('CommentID=' + commentId);
-        logMessage('DraftID=' + draftId);
-
-        if (typeof commentId != 'undefined' && commentId != '') {
-          singleInstance = false;
-        }
-
-        logMessage('isSingleInstance='+singleInstance);
-
         if ($currentEditableTextarea.length) {
           // instantiate new editor
           var editor = new EasyMDE({
@@ -582,8 +507,17 @@
 
           // forceSync = true, need to clear form after async requests
           $currentEditableTextarea.closest('form').on('complete', function (frm, btn) {
-            logMessage("form::complete");
             editor.codemirror.setValue('');
+          });
+
+          editor.codemirror.on('change', function (cm, event) {
+            // Key events don't work properly on Android Chrome
+            if (!cm.state.completionActive /*Enables keyboard navigation in autocomplete list*/) {
+                if (event.origin == '+input' && event.text && event.text.length > 0 && event.text[0] === '@') {
+                  cm.showHint({ completeSingle: false, alignWithWord: true });
+                  return;
+              }
+            }
           });
 
           editor.codemirror.on('keydown', function (cm, event) {
@@ -616,7 +550,6 @@
 
   $(document).on('contentLoad', function(e) {
     if ($('.BodyBox[format="Markdown"], .BodyBox[format="wysiwyg"],.js-bodybox[format="Markdown"], .js-bodybox[format="wysiwyg"]', e.target).length === 0) {
-      console.log('Supported only [format="Markdown"][format="wysiwyg"]');
       return;
     }
     // Multiple editors are supported on a page
