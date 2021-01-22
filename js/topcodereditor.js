@@ -44,8 +44,7 @@
               success: function (data) {
                 var result = [];
                 $.each(data, function (i, item) {
-                  result.push({text: data[i].handle, displayText: data[i].handle+ "("+ data[i].firstName + ' ' + data[i].lastName +")",
-                    className: 'Username'});
+                  result.push({text: data[i].handle, displayText: data[i].handle, className: 'Username'});
                 });
                 return accept({
                   list: result,
