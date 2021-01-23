@@ -44,7 +44,11 @@
               success: function (data) {
                 var result = [];
                 $.each(data, function (i, item) {
-                  result.push({text: data[i].handle, displayText: data[i].handle, className: 'Username'});
+                  var text = data[i].handle;
+                  if(text.indexOf('.') > -1) {
+                    text = '"' + text + '"';
+                  }
+                  result.push({text: text, displayText: data[i].handle, className: 'Username'});
                 });
                 return accept({
                   list: result,
