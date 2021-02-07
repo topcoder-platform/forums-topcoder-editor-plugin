@@ -339,11 +339,49 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
             return $this->canUpload;
         } else {
             // Check config and user role upload permission
-            if (c('Garden.AllowFileUploads', true) &&
-                Gdn::session()->checkPermission('Garden.Uploads.Add', false)) {
-                // Check category-specific permission
-                $permissionCategory = CategoryModel::permissionCategory(Gdn::controller()->data('Category'));
-                $this->canUpload = val('AllowFileUploads', $permissionCategory, true);
+            if (c('Garden.AllowFileUploads', true)) {
+                if(Gdn::session()->checkPermission('Garden.Uploads.Add', false)) {
+                    $this->canUpload = true;
+                } else {
+                    $actionType = Gdn::controller()->data('ActionType');
+                    // Check category-specific permission
+                    if(Gdn::controller()->data('Category')) {
+                        $permissionCategory = CategoryModel::permissionCategory(Gdn::controller()->data('Category'));
+                        $discussionsUploads = CategoryModel::checkPermission($permissionCategory, 'Vanilla.Discussions.Uploads');
+                        $commentsUploads = CategoryModel::checkPermission($permissionCategory, 'Vanilla.Comments.Uploads');
+                        // User has both permissions
+                        if ($commentsUploads && $discussionsUploads) {
+                            $this->canUpload = true;
+                        } else {
+                            // Current Discussion mode
+                              switch ($actionType) {
+                                case 'NewDiscussion':
+                                    // Always true. User can change a category before posting discussion.
+                                    // Check upload permissions on the client
+                                    $this->canUpload = true;
+                                    break;
+                                case 'EditDiscussion':
+                                    $this->canUpload = $discussionsUploads;
+                                    break;
+                                case 'NewComment':
+                                case 'EditComment':
+                                    $this->canUpload = $commentsUploads;
+                                    break;
+                                default:
+                                    $this->canUpload = false;
+                            }
+                         }
+                    } else {
+                        // a category is not selected, check permission on the client
+                        switch ($actionType) {
+                            case 'NewDiscussion':
+                                $this->canUpload = true;
+                                break;
+                            default:
+                                $this->canUpload = false;
+                        }
+                    }
+                }
             } else {
                 $this->canUpload = false;
             }
