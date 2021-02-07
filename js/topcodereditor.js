@@ -1,4 +1,5 @@
 (function($) {
+  var editor;
   $.fn.setAsEditor = function(selector) {
     selector = selector || '.BodyBox,.js-bodybox';
 
@@ -193,6 +194,25 @@
 
       var formData = new FormData();
       formData.append('file', file);
+
+      var $element = self.element;
+      var postForm = $element.closest('form');
+      var commentId = $(postForm).find('#Form_CommentID').val();
+      var discussionId = $(postForm).find('#Form_DiscussionID').val();
+      var categoryId = $(postForm).find('#Form_CategoryID').val();
+      var actionType = $(postForm).find('#Form_ActionType').val();
+      if(actionType != null) {
+        formData.append('actionType', actionType);
+      }
+      if(categoryId != null) {
+        formData.append('categoryID', categoryId);
+      }
+      if(commentId != null) {
+        formData.append('commentID', commentId);
+      }
+      if(discussionId != null) {
+        formData.append('discussionID', discussionId);
+      }
 
       var request = new XMLHttpRequest();
       request.upload.onprogress = function (event) {
@@ -453,7 +473,7 @@
         var $currentEditableTextarea = $(textareaObj);
         if ($currentEditableTextarea.length) {
           // instantiate new editor
-          var editor = new EasyMDE({
+          editor = new EasyMDE({
             shortcuts: {
               "mentions": "Ctrl-Space",
             },
@@ -472,8 +492,8 @@
                 className: "fa fa-at",
                 title: "Mention a Topcoder User",
 
-              }, "link", canUpload ? 'upload-image' : "image", "table", "horizontal-rule", "|", "fullscreen", "|", "guide"],
-            hideIcons: ["guide", "heading", "preview", "side-by-side"],
+              }, "link","upload-image" , "image", "table", "horizontal-rule", "|", "fullscreen", "|", "guide"],
+            hideIcons:  canUpload ? ["guide", "heading", "preview", "side-by-side"]: ["guide", "heading", "preview", "side-by-side", "upload-image"],
             insertTexts: {
               link: ['[', '](#url#)'],
               image: ['![](', '#url#)'],
@@ -493,13 +513,13 @@
               sbOnUploaded: 'Uploaded #image_name#',
               sizeUnits: ' B, KB, MB',
              },
-             uploadImage: canUpload,
-             imageMaxSize: maxUploadSize, //Maximum image size in bytes
-             imageAccept: allowedFileMimeTypeWithExts, //A comma-separated list of mime-types and extensions
-             imageUploadFunction: customUploadImage,
-             beforeUploadingImagesFunction: beforeUploadingImages,
-             errorCallback:  errorCallback,// A callback function used to define how to display an error message.
-             errorMessages: {
+            uploadImage: canUpload,
+            imageMaxSize: maxUploadSize, //Maximum image size in bytes
+            imageAccept: allowedFileMimeTypeWithExts, //A comma-separated list of mime-types and extensions
+            imageUploadFunction: customUploadImage,
+            beforeUploadingImagesFunction: beforeUploadingImages,
+            errorCallback:  errorCallback,// A callback function used to define how to display an error message.
+            errorMessages: {
                noFileGiven: 'Select a file.',
                typeNotAllowed: 'Uploading #image_name# was failed. The file type (#image_type#) is not supported.',
                fileTooLarge: 'Uploading #image_name# was failed. The file is too big (#image_size#).\n' +
@@ -557,6 +577,24 @@
     }
     // Multiple editors are supported on a page
     $('.BodyBox[format="Markdown"], .BodyBox[format="wysiwyg"],.js-bodybox[format="Markdown"], .js-bodybox[format="wysiwyg"]', e.target).setAsEditor();
+    var categorySelect = $(this).find('#DiscussionForm select');
+    if(categorySelect.length) {
+      var selectedOption = categorySelect.find('option:selected');
+      var uploads = selectedOption.attr("uploads");
+      editor.enableUploadImages(uploads === "1");
+    }
+    editor.updateToolbar();
+  });
+
+  $(document).on('change','#DiscussionForm select', function() {
+    var element = $(this).find('option:selected');
+    var categoryID = element.val();
+    if($(this).id != '#Form_CategoryID') {
+      var postForm = $(element).closest('form');
+      $(postForm).find('#Form_CategoryID').val(categoryID);
+    }
+    var uploads = element.attr("uploads");
+    editor.enableUploadImages(uploads === "1");
   });
 
   // Preview mode
