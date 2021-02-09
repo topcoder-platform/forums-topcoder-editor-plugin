@@ -349,6 +349,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
                         $permissionCategory = CategoryModel::permissionCategory(Gdn::controller()->data('Category'));
                         $discussionsUploads = CategoryModel::checkPermission($permissionCategory, 'Vanilla.Discussions.Uploads');
                         $commentsUploads = CategoryModel::checkPermission($permissionCategory, 'Vanilla.Comments.Uploads');
+                        $categoryType = val('DisplayAs', Gdn::controller()->data('Category'));
                         // User has both permissions
                         if ($commentsUploads && $discussionsUploads) {
                             $this->canUpload = true;
@@ -358,7 +359,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
                                 case 'NewDiscussion':
                                     // Always true. User can change a category before posting discussion.
                                     // Check upload permissions on the client
-                                    $this->canUpload = true;
+                                    $this->canUpload = $categoryType == "Discussions"? $discussionsUploads: true;
                                     break;
                                 case 'EditDiscussion':
                                     $this->canUpload = $discussionsUploads;
@@ -375,6 +376,7 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
                         // a category is not selected, check permission on the client
                         switch ($actionType) {
                             case 'NewDiscussion':
+                                // Check upload permissions on the client
                                 $this->canUpload = true;
                                 break;
                             default:
