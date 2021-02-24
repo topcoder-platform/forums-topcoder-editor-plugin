@@ -34,8 +34,8 @@
         setTimeout(function() {
           var cursor = cm.getCursor(), line = cm.getLine(cursor.line);
           var start = cursor.ch, end = cursor.ch
-          while (start && /[\w\.]/.test(line.charAt(start - 1))) --start
-          while (end < line.length && /[\w\.]/.test(line.charAt(end))) ++end
+          while (start && /[\w\.\+-]/.test(line.charAt(start - 1))) --start
+          while (end < line.length && /[\w\.\+-]/.test(line.charAt(end))) ++end
           var word = line.slice(start, end).toLowerCase();
           if(word.length > 1) {
             $.ajax({
