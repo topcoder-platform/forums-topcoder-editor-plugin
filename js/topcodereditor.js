@@ -46,7 +46,7 @@
                 var result = [];
                 $.each(data, function (i, item) {
                   var text = data[i].handle;
-                  if(text.indexOf('.') > -1) {
+                  if(/[\W]/.test(text) > -1) {
                     text = '"' + text + '"';
                   }
                   result.push({text: text, displayText: data[i].handle, className: 'Username'});
