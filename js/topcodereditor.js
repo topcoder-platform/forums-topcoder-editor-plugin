@@ -610,4 +610,10 @@
       MathJax.typeset();
     }
   });
+
+  // Comment with quotes
+  $(document).on('ApplyQuoteText',function(ev, quoteText) {
+     var text = editor.value();
+     editor.value(quoteText + '\n' + text + '\n');
+  });
 }(jQuery));
