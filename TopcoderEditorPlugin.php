@@ -83,6 +83,8 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         $sender->addJsFile('topcodereditor.mathjax.js', 'plugins/TopcoderEditor', ['defer'=>'defer']);
         $c = Gdn::controller();
 
+        $sender->Form->addHidden('MaxCommentLength', c('Vanilla.Comment.MaxLength', 10000));
+
         // Set formats
         $c->addDefinition('defaultInputFormat', c('Garden.InputFormatter'));
         $c->addDefinition('defaultMobileInputFormat', c('Garden.MobileInputFormatter'));
@@ -115,11 +117,13 @@ class TopcoderEditorPlugin extends Gdn_Plugin {
         // Get max file uploads, to be used for max drops at once.
         $c->addDefinition('maxFileUploads', ini_get('max_file_uploads'));
 
+        // Max Comment Length
+        $c->addDefinition('maxCommentLength', c('Vanilla.Comment.MaxLength', 10000));
+
         // Set editor definitions
         $c->addDefinition('editorVersion', $this->pluginInfo['Version']);
         $c->addDefinition('editorInputFormat', ucfirst(self::FORMAT_NAME));
         $c->addDefinition('editorPluginAssets', $this->AssetPath);
-
         $additionalDefinitions = [];
         $this->EventArguments['definitions'] = &$additionalDefinitions;
         $this->fireEvent('GetJSDefinitions');
