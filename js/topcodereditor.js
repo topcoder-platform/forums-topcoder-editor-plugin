@@ -1,5 +1,6 @@
 (function($) {
   var editor;
+  var allEditors = [];
   $.fn.setAsEditor = function(selector) {
     selector = selector || '.BodyBox,.js-bodybox';
 
@@ -564,7 +565,8 @@
 
           // forceSync = true, need to clear form after async requests
           $currentEditableTextarea.closest('form').on('complete', function (frm, btn) {
-            editor.codemirror.setValue('');
+            var mainEditor = allEditors[0];
+            mainEditor.codemirror.setValue('');
           });
 
           editor.codemirror.on('change', function (cm, event) {
@@ -615,6 +617,11 @@
               }
             }
           });
+          // We have only one main editor at a page which should used for quote/replyto
+          // FIX: https://github.com/topcoder-platform/forums/issues/540
+          if(allEditors.length == 0) {
+            allEditors.push(editor);
+          }
         }
     }; //editorInit
 
@@ -646,7 +653,8 @@
       $(postForm).find('#Form_CategoryID').val(categoryID);
     }
     var uploads = element.attr("uploads");
-    editor.enableUploadImages(uploads === "1");
+    var mainEditor = allEditors[0];
+    mainEditor.enableUploadImages(uploads === "1");
   });
 
   // Preview mode
@@ -664,8 +672,9 @@
   });
 
   // Comment with quotes
-  $(document).on('ApplyQuoteText',function(ev, quoteText) {
-     var text = editor.value();
-     editor.value(quoteText + '\n' + text + '\n');
+  $(document).on('ApplyQuoteText',function(ev, quoteText, ed) {
+     var mainEditor = allEditors[0];
+     var text = mainEditor.value();
+     mainEditor.value(quoteText + '\n' + text + '\n');
   });
 }(jQuery));
