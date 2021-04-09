@@ -279,7 +279,7 @@ function getState(cm, pos) {
     var types = stat.type.split(' ');
 
     var ret = {},
-      data, text;
+        data, text;
     for (var i = 0; i < types.length; i++) {
         data = types[i];
         if (data === 'strong') {
@@ -450,10 +450,10 @@ function toggleCodeBlock(editor) {
 
     function insertFencingAtSelection(cm, cur_start, cur_end, fenceCharsToInsert) {
         var start_line_sel = cur_start.line + 1,
-          end_line_sel = cur_end.line + 1,
-          sel_multi = cur_start.line !== cur_end.line,
-          repl_start = fenceCharsToInsert + '\n',
-          repl_end = '\n' + fenceCharsToInsert;
+            end_line_sel = cur_end.line + 1,
+            sel_multi = cur_start.line !== cur_end.line,
+            repl_start = fenceCharsToInsert + '\n',
+            repl_end = '\n' + fenceCharsToInsert;
         if (sel_multi) {
             end_line_sel++;
         }
@@ -473,20 +473,20 @@ function toggleCodeBlock(editor) {
     }
 
     var cm = editor.codemirror,
-      cur_start = cm.getCursor('start'),
-      cur_end = cm.getCursor('end'),
-      tok = cm.getTokenAt({
-          line: cur_start.line,
-          ch: cur_start.ch || 1,
-      }), // avoid ch 0 which is a cursor pos but not token
-      line = cm.getLineHandle(cur_start.line),
-      is_code = code_type(cm, cur_start.line, line, tok);
+        cur_start = cm.getCursor('start'),
+        cur_end = cm.getCursor('end'),
+        tok = cm.getTokenAt({
+            line: cur_start.line,
+            ch: cur_start.ch || 1,
+        }), // avoid ch 0 which is a cursor pos but not token
+        line = cm.getLineHandle(cur_start.line),
+        is_code = code_type(cm, cur_start.line, line, tok);
     var block_start, block_end, lineCount;
 
     if (is_code === 'single') {
         // similar to some EasyMDE _toggleBlock logic
         var start = line.text.slice(0, cur_start.ch).replace('`', ''),
-          end = line.text.slice(cur_start.ch).replace('`', '');
+            end = line.text.slice(cur_start.ch).replace('`', '');
         cm.replaceRange(start + end, {
             line: cur_start.line,
             ch: 0,
@@ -657,11 +657,11 @@ function toggleCodeBlock(editor) {
         // if we are going to un-indent based on a selected set of lines, and the next line is indented too, we need to
         // insert a blank line so that the next line(s) continue to be indented code
         var next_line = cm.getLineHandle(block_end + 1),
-          next_line_last_tok = next_line && cm.getTokenAt({
-              line: block_end + 1,
-              ch: next_line.text.length - 1,
-          }),
-          next_line_indented = next_line_last_tok && token_state(next_line_last_tok).indentedCode;
+            next_line_last_tok = next_line && cm.getTokenAt({
+                line: block_end + 1,
+                ch: next_line.text.length - 1,
+            }),
+            next_line_indented = next_line_last_tok && token_state(next_line_last_tok).indentedCode;
         if (next_line_indented) {
             cm.replaceRange('\n', {
                 line: block_end + 1,
@@ -818,11 +818,11 @@ function afterImageUploaded(editor, url) {
 
     // Check if media is an image
     if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
-        _replaceSelection(cm, stat.image, options.insertTexts.uploadedImage, url);
+      _replaceSelection(cm, stat.image, options.insertTexts.uploadedImage, url);
     } else {
-        var text_link = options.insertTexts.link;
-        text_link[0] = '[' + imageName;
-        _replaceSelection(cm, stat.link, text_link, url);
+      var text_link = options.insertTexts.link;
+      text_link[0] = '[' + imageName;
+      _replaceSelection(cm, stat.link, text_link, url);
     }
 
     // show uploaded image filename for 1000ms
@@ -898,7 +898,7 @@ function toggleSideBySide(editor) {
     function removeNoFullscreenClass(el) {
         if (el != null) {
             el.className = el.className.replace(
-              /\s*sided--no-fullscreen\s*/g, ''
+                /\s*sided--no-fullscreen\s*/g, ''
             );
         }
     }
@@ -911,7 +911,7 @@ function toggleSideBySide(editor) {
             });
         }
         preview.className = preview.className.replace(
-          /\s*editor-preview-active-side\s*/g, ''
+            /\s*editor-preview-active-side\s*/g, ''
         );
         if (toolbarButton) toolbarButton.className = toolbarButton.className.replace(/\s*active\s*/g, '');
         wrapper.className = wrapper.className.replace(/\s*CodeMirror-sided\s*/g, ' ');
@@ -943,7 +943,7 @@ function toggleSideBySide(editor) {
     var previewNormal = wrapper.lastChild;
     if (/editor-preview-active/.test(previewNormal.className)) {
         previewNormal.className = previewNormal.className.replace(
-          /\s*editor-preview-active\s*/g, ''
+            /\s*editor-preview-active\s*/g, ''
         );
         var toolbar = editor.toolbarElements.preview;
         var toolbar_div = editor.toolbar_div;
@@ -1014,7 +1014,7 @@ function togglePreview(editor) {
 
     if (/editor-preview-active/.test(preview.className)) {
         preview.className = preview.className.replace(
-          /\s*editor-preview-active\s*/g, ''
+            /\s*editor-preview-active\s*/g, ''
         );
         if (toolbar) {
             toolbar.className = toolbar.className.replace(/\s*active\s*/g, '');
@@ -1044,7 +1044,7 @@ function _replaceSelection(cm, active, startEnd, url) {
     var start = startEnd[0];
     var end = startEnd[1];
     var startPoint = {},
-      endPoint = {};
+        endPoint = {};
     Object.assign(startPoint, cm.getCursor('start'));
     Object.assign(endPoint, cm.getCursor('end'));
     if (url) {
@@ -1340,9 +1340,9 @@ function _mergeProperties(target, source) {
             if (source[property] instanceof Array) {
                 target[property] = source[property].concat(target[property] instanceof Array ? target[property] : []);
             } else if (
-              source[property] !== null &&
-              typeof source[property] === 'object' &&
-              source[property].constructor === Object
+                source[property] !== null &&
+                typeof source[property] === 'object' &&
+                source[property].constructor === Object
             ) {
                 target[property] = _mergeProperties(target[property] || {}, source[property]);
             } else {
@@ -1616,7 +1616,7 @@ var errorMessages = {
     noFileGiven: 'You must select a file.',
     typeNotAllowed: 'This image type is not allowed.',
     fileTooLarge: 'Image #image_name# is too big (#image_size#).\n' +
-      'Maximum file size is #image_max_size#.',
+        'Maximum file size is #image_max_size#.',
     importError: 'Something went wrong when uploading the image #image_name#.',
 };
 
@@ -1765,7 +1765,7 @@ function EasyMDE(options) {
 
     // If overlay mode is specified and combine is not provided, default it to true
     if (options.overlayMode && options.overlayMode.combine === undefined) {
-        options.overlayMode.combine = true;
+      options.overlayMode.combine = true;
     }
 
     // Update this options
@@ -1841,7 +1841,7 @@ function EasyMDE(options) {
  */
 EasyMDE.prototype.uploadImages = function (files, onSuccess, onError) {
     if (files.length === 0) {
-        return;
+      return;
     }
     var names = [];
     if (this.options.beforeUploadingImagesFunction) {
@@ -1866,7 +1866,7 @@ EasyMDE.prototype.uploadImages = function (files, onSuccess, onError) {
  */
 EasyMDE.prototype.uploadImagesUsingCustomFunction = function (imageUploadFunction, files) {
     if (files.length === 0) {
-        return;
+      return;
     }
     if (this.options.beforeUploadingImagesFunction) {
         this.options.beforeUploadingImagesFunction.apply(this, [files]);
@@ -1928,9 +1928,9 @@ EasyMDE.prototype.markdown = function (text) {
             if (hljs) {
                 markedOptions.highlight = function (code, language) {
                     if (language && hljs.getLanguage(language)) {
-                        return hljs.highlight(language, code).value;
+                      return hljs.highlight(language, code).value;
                     } else {
-                        return hljs.highlightAuto(code).value;
+                    return hljs.highlightAuto(code).value;
                     }
                 };
             }
@@ -2012,31 +2012,31 @@ EasyMDE.prototype.render = function (el) {
 
     // CodeMirror overlay mode
     if (options.overlayMode) {
-        CodeMirror.defineMode('overlay-mode', function(config) {
-            return CodeMirror.overlayMode(CodeMirror.getMode(config, options.spellChecker !== false ? 'spell-checker' : 'gfm'), options.overlayMode.mode, options.overlayMode.combine);
+      CodeMirror.defineMode('overlay-mode', function(config) {
+        return CodeMirror.overlayMode(CodeMirror.getMode(config, options.spellChecker !== false ? 'spell-checker' : 'gfm'), options.overlayMode.mode, options.overlayMode.combine);
+      });
+
+      mode = 'overlay-mode';
+      backdrop = options.parsingConfig;
+      backdrop.gitHubSpice = false;
+
+      if (options.spellChecker !== false) {
+        backdrop.name = 'gfm';
+
+        CodeMirrorSpellChecker({
+          codeMirrorInstance: CodeMirror,
         });
 
-        mode = 'overlay-mode';
+      } else if (options.spellChecker !== false) {
+        mode = 'spell-checker';
         backdrop = options.parsingConfig;
+        backdrop.name = 'gfm';
         backdrop.gitHubSpice = false;
 
-        if (options.spellChecker !== false) {
-            backdrop.name = 'gfm';
-
-            CodeMirrorSpellChecker({
-                codeMirrorInstance: CodeMirror,
-            });
-
-        } else if (options.spellChecker !== false) {
-            mode = 'spell-checker';
-            backdrop = options.parsingConfig;
-            backdrop.name = 'gfm';
-            backdrop.gitHubSpice = false;
-
-            CodeMirrorSpellChecker({
-                codeMirrorInstance: CodeMirror,
-            });
-        }
+        CodeMirrorSpellChecker({
+            codeMirrorInstance: CodeMirror,
+        });
+      }
     } else {
         mode = options.parsingConfig;
         mode.name = 'gfm';
@@ -2062,7 +2062,7 @@ EasyMDE.prototype.render = function (el) {
         extraKeys: keyMaps,
         lineWrapping: (options.lineWrapping === false) ? false : true,
         allowDropFileTypes: ['text/plain'],
-        //  dragDrop: (options.uploadImage != undefined)? options.uploadImage: false,
+      //  dragDrop: (options.uploadImage != undefined)? options.uploadImage: false,
         placeholder: options.placeholder || el.getAttribute('placeholder') || '',
         styleSelectedText: (options.styleSelectedText != undefined) ? options.styleSelectedText : !isMobile(),
         scrollbarStyle: (options.scrollbarStyle != undefined) ? options.scrollbarStyle : 'native',
@@ -2281,9 +2281,9 @@ EasyMDE.prototype.openBrowseFileWindow = function (onSuccess, onError) {
     imageInput.click(); //dispatchEvent(new MouseEvent('click'));  // replaced with click() for IE11 compatibility.
     function onChange(event) {
         if (self.options.imageUploadFunction) {
-            self.uploadImagesUsingCustomFunction(self.options.imageUploadFunction, event.target.files);
+          self.uploadImagesUsingCustomFunction(self.options.imageUploadFunction, event.target.files);
         } else {
-            self.uploadImages(event.target.files, onSuccess, onError);
+          self.uploadImages(event.target.files, onSuccess, onError);
         }
         imageInput.removeEventListener('change', onChange);
     }
@@ -2325,9 +2325,9 @@ EasyMDE.prototype.uploadImage = function (file, onSuccess, onError) {
     function fillErrorMessage(errorMessage) {
         var units = self.options.imageTexts.sizeUnits.split(',');
         return errorMessage
-          .replace('#image_name#', file.name)
-          .replace('#image_size#', humanFileSize(file.size, units))
-          .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
+            .replace('#image_name#', file.name)
+            .replace('#image_size#', humanFileSize(file.size, units))
+            .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
     }
 
     if (file.size > this.options.imageMaxSize) {
@@ -2368,7 +2368,7 @@ EasyMDE.prototype.uploadImage = function (file, onSuccess, onError) {
                 onErrorSup(fillErrorMessage(response.error));
             } else {  //unknown error
                 console.error('EasyMDE: Received an unexpected response after uploading the image.'
-                  + this.status + ' (' + this.statusText + ')');
+                    + this.status + ' (' + this.statusText + ')');
                 onErrorSup(fillErrorMessage(self.options.errorMessages.importError));
             }
         }
@@ -2376,7 +2376,7 @@ EasyMDE.prototype.uploadImage = function (file, onSuccess, onError) {
 
     request.onerror = function (event) {
         console.error('EasyMDE: An unexpected error occurred when trying to upload the image.'
-          + event.target.status + ' (' + event.target.statusText + ')');
+            + event.target.status + ' (' + event.target.statusText + ')');
         onErrorSup(self.options.errorMessages.importError);
     };
 
@@ -2412,9 +2412,9 @@ EasyMDE.prototype.uploadImageUsingCustomFunction = function(imageUploadFunction,
     function fillErrorMessage(errorMessage) {
         var units = self.options.imageTexts.sizeUnits.split(',');
         return errorMessage
-          .replace('#image_name#', file.name)
-          .replace('#image_size#', humanFileSize(file.size, units))
-          .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
+            .replace('#image_name#', file.name)
+            .replace('#image_size#', humanFileSize(file.size, units))
+            .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
     }
 
     imageUploadFunction.apply(this, [file, onSuccess, onError]);
@@ -2693,26 +2693,29 @@ EasyMDE.prototype.createStatusbar = function (status) {
 
         // Ensure the defaultValue is a function
         if (typeof item.defaultValue === 'function') {
-            item.defaultValue(el);
+            // FIX: Fixed issues with status bar if there are several editors on a page
+            item.defaultValue(el, this.codemirror);
         }
 
 
         // Ensure the onUpdate is a function
         if (typeof item.onUpdate === 'function') {
             // Create a closure around the span of the current action, then execute the onUpdate handler
-            this.codemirror.on('update', (function (el, item) {
+            // FIX: Fixed issues with status bar if there are several editors on a page
+            this.codemirror.on('update', (function (el, item, cm) {
                 return function () {
-                    item.onUpdate(el);
+                    item.onUpdate(el,cm);
                 };
-            }(el, item)));
+            }(el, item, this.codemirror)));
         }
         if (typeof item.onActivity === 'function') {
             // Create a closure around the span of the current action, then execute the onActivity handler
-            this.codemirror.on('cursorActivity', (function (el, item) {
+            // FIX: Fixed issues with status bar if there are several editors on a page
+            this.codemirror.on('cursorActivity', (function (el, item, cm) {
                 return function () {
-                    item.onActivity(el);
+                    item.onActivity(el, cm);
                 };
-            }(el, item)));
+            }(el, item, this.codemirror)));
         }
 
 

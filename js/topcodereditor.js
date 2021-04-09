@@ -1,5 +1,6 @@
 (function($) {
   var editor;
+  var allEditors = [];
   $.fn.setAsEditor = function(selector) {
     selector = selector || '.BodyBox,.js-bodybox';
 
@@ -9,6 +10,7 @@
     /**
      * Determine editor settings
      */
+    var maxCommentLength = (gdn.definition('maxCommentLength'));
     var canUpload = (gdn.definition('canUpload', false)) ? 1 : 0;
     var maxUploadSize = gdn.definition('maxUploadSize');
     var allowedImageExtensions = gdn.definition('allowedImageExtensions');
@@ -525,15 +527,67 @@
                fileTooLarge: 'Uploading #image_name# was failed. The file is too big (#image_size#).\n' +
                  'Maximum file size is #image_max_size#.',
                importError: 'Uploading #image_name# was failed. Something went wrong when uploading the file.',
-             }
+             },
+            status: [{
+                className: 'message',
+                defaultValue: function(el) {
+                  el.innerHTML = '';
+                },
+                onUpdate: function(el) {
+                },
+              }
+              , 'upload-image', {
+              className: 'countOfRemainingChars',
+              defaultValue: function(el, cm) {
+                var countOfRemainingChars = maxCommentLength;
+                var text = cm.getValue();
+                if(text != null && text.length > 0) {
+                  countOfRemainingChars = maxCommentLength - text.length;
+                  if(countOfRemainingChars < 0) {
+                    countOfRemainingChars  = 0;
+                  }
+                }
+                el.innerHTML = countOfRemainingChars +" character remaining";
+              },
+              onUpdate: function(el, cm) {
+                var countOfRemainingChars = maxCommentLength;
+                var text = cm.getValue();
+                if(text != null && text.length > 0) {
+                  countOfRemainingChars = maxCommentLength - text.length;
+                  if(countOfRemainingChars < 0) {
+                    countOfRemainingChars  = 0;
+                  }
+                }
+                el.innerHTML = countOfRemainingChars +" character remaining";
+              },
+            }],
           });
 
           // forceSync = true, need to clear form after async requests
           $currentEditableTextarea.closest('form').on('complete', function (frm, btn) {
-            editor.codemirror.setValue('');
+            var mainEditor = allEditors[0];
+            mainEditor.codemirror.setValue('');
           });
 
           editor.codemirror.on('change', function (cm, event) {
+            var frm = $(cm.getInputField()).closest('form').first();
+            var editorContainer = $(frm).find('.EasyMDEContainer');
+            var messageContainer = $(frm).find('.editor-statusbar .message');
+
+            var text = cm.getValue();
+            if(text.length > 0 && text.length <= maxCommentLength) {
+              $(editorContainer).removeClass('error');
+              $(messageContainer).text('');
+              $(frm).find(':submit').removeAttr("disabled");
+              $(frm).find('.Buttons a.Button').removeClass('Disabled');
+            } else if(text.length > maxCommentLength) {
+              $(editorContainer).addClass('error');
+              var count = text.length - maxCommentLength;
+              $(messageContainer).text('Comment is '+ count + ' characters too long');
+              $(frm).find(':submit').attr('disabled', 'disabled');
+              $(frm).find('.Buttons a.Button:not(.Cancel)').addClass('Disabled');
+            }
+
             // Key events don't work properly on Android Chrome
             if (!cm.state.completionActive /*Enables keyboard navigation in autocomplete list*/) {
                 if (event.origin == '+input' && event.text && event.text.length > 0 && event.text[0] === '@') {
@@ -563,6 +617,11 @@
               }
             }
           });
+          // We have only one main editor at a page which should used for quote/replyto
+          // FIX: https://github.com/topcoder-platform/forums/issues/540
+          if(allEditors.length == 0) {
+            allEditors.push(editor);
+          }
         }
     }; //editorInit
 
@@ -594,7 +653,8 @@
       $(postForm).find('#Form_CategoryID').val(categoryID);
     }
     var uploads = element.attr("uploads");
-    editor.enableUploadImages(uploads === "1");
+    var mainEditor = allEditors[0];
+    mainEditor.enableUploadImages(uploads === "1");
   });
 
   // Preview mode
@@ -612,8 +672,9 @@
   });
 
   // Comment with quotes
-  $(document).on('ApplyQuoteText',function(ev, quoteText) {
-     var text = editor.value();
-     editor.value(quoteText + '\n' + text + '\n');
+  $(document).on('ApplyQuoteText',function(ev, quoteText, ed) {
+     var mainEditor = allEditors[0];
+     var text = mainEditor.value();
+     mainEditor.value(quoteText + '\n' + text + '\n');
   });
 }(jQuery));
