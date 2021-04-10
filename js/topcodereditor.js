@@ -542,6 +542,7 @@
                 var countOfRemainingChars = maxCommentLength;
                 var text = cm.getValue();
                 if(text != null && text.length > 0) {
+                  text = gdn.normalizeText(text);
                   countOfRemainingChars = maxCommentLength - text.length;
                   if(countOfRemainingChars < 0) {
                     countOfRemainingChars  = 0;
@@ -553,6 +554,7 @@
                 var countOfRemainingChars = maxCommentLength;
                 var text = cm.getValue();
                 if(text != null && text.length > 0) {
+                  text = gdn.normalizeText(text);
                   countOfRemainingChars = maxCommentLength - text.length;
                   if(countOfRemainingChars < 0) {
                     countOfRemainingChars  = 0;
@@ -575,6 +577,7 @@
             var messageContainer = $(frm).find('.editor-statusbar .message');
 
             var text = cm.getValue();
+            text = gdn.normalizeText(text);
             if(text.length > 0 && text.length <= maxCommentLength) {
               $(editorContainer).removeClass('error');
               $(messageContainer).text('');
