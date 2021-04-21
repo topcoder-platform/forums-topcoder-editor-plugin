@@ -467,6 +467,29 @@
       $(postForm).prepend(errorMessage);
     }
 
+    function columnWidth(rows, columnIndex) {
+      return Math.max.apply(null, rows.map(function(row) {
+        return ('' + row[columnIndex]).length
+      }))
+    }
+
+    function looksLikeTable(rows){
+      if(rows && rows.length < 2) {
+        return false;
+      }
+      var countOfColumns = rows[0].length;
+      if (countOfColumns < 2) {
+         return false;
+      }
+      // Each row has the same count of columns
+      for(var i = 1; i < rows.length; i++){
+          if(countOfColumns != rows[i].length) {
+             return false;
+          }
+      }
+      return true;
+    }
+
     /**
      * Initialize editor on the page.
      *
@@ -620,6 +643,70 @@
               }
             }
           });
+
+          editor.codemirror.on('paste', function (cm, event) {
+            var clipboard = event.clipboardData;
+            var data = clipboard.getData('text/plain').trim();
+            var rows = data.split((/[\u0085\u2028\u2029]|\r\n?/g)).map(function(row) {
+              row = row.replace('\n', ' ')
+              return row.split("\t")
+            })
+            var isTableData = looksLikeTable(rows);
+            if(isTableData) {
+              event.preventDefault();
+            } else{
+              return;
+            }
+
+            var colAlignments = [];
+
+            var columnWidths = rows[0].map(function(column, columnIndex) {
+              var alignment = "l";
+              var re = /^(\^[lcr])/i;
+              var m = column.match(re);
+              if (m) {
+                var align = m[1][1].toLowerCase();
+                if (align === "c") {
+                  alignment = "c";
+                } else if (align === "r") {
+                  alignment = "r";
+                }
+              }
+              colAlignments.push(alignment);
+              column = column.replace(re, "");
+              rows[0][columnIndex] = column;
+              return columnWidth(rows, columnIndex);
+            });
+            var markdownRows = rows.map(function(row, rowIndex) {
+              // | col1   | col2 | col3  |
+              // |--------|------|-------|
+              // | val1   | val2 | val3  |
+              return "| " + row.map(function(column, index) {
+                return column + Array(columnWidths[index] - column.length + 1).join(" ")
+              }).join(" | ") + " |";
+            })
+            markdownRows.splice(1, 0, "|" + columnWidths.map(function(width, index) {
+              var prefix = "";
+              var postfix = "";
+              var adjust = 0;
+              var alignment = colAlignments[index];
+              if (alignment === "r") {
+                postfix = ":";
+                adjust = 1;
+              } else if (alignment == "c") {
+                prefix = ":";
+                postfix = ":";
+                adjust = 2;
+              }
+              return prefix + Array(columnWidths[index] + 3 - adjust).join("-") + postfix;
+            }).join("|") + "|");
+
+            var result =  "\n"+markdownRows.join("\n");
+            var currentCursorPosition = cm.getCursor();
+            cm.replaceSelection(result,{line: currentCursorPosition.line+2, ch: result.length});
+            return false;
+          });
+
           // We have only one main editor at a page which should used for quote/replyto
           // FIX: https://github.com/topcoder-platform/forums/issues/540
           if(allEditors.length == 0) {
