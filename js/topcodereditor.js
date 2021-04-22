@@ -646,11 +646,13 @@
 
           editor.codemirror.on('paste', function (cm, event) {
             var clipboard = event.clipboardData;
-            var data = clipboard.getData('text/plain').trim();
-            var rows = data.split((/[\u0085\u2028\u2029]|\r\n?/g)).map(function(row) {
-              row = row.replace('\n', ' ')
-              return row.split("\t")
+            // trim the trailing newline character, if present.
+            var data = clipboard.getData('text/plain');
+            data = data.replace(/(?:[\n\u0085\u2028\u2029]|\r\n?)$/, '');
+            var rows = data.split((/[\n\u0085\u2028\u2029]|\r\n?/g)).map(function(row) {
+              return row.split("\t");
             })
+
             var isTableData = looksLikeTable(rows);
             if(isTableData) {
               event.preventDefault();
