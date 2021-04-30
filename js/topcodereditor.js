@@ -467,6 +467,97 @@
       $(postForm).prepend(errorMessage);
     }
 
+    function columnWidth(rows, columnIndex) {
+      return Math.max.apply(null, rows.map(function(row) {
+        return ('' + row[columnIndex]).length
+      }))
+    }
+
+    function looksLikeTable(rows){
+      if(rows && rows.length < 2) {
+        return false;
+      }
+      var countOfColumns = rows[0].length;
+      if (countOfColumns < 2) {
+         return false;
+      }
+      // Each row has the same count of columns
+      for(var i = 1; i < rows.length; i++){
+          if(countOfColumns != rows[i].length) {
+             return false;
+          }
+      }
+      return true;
+    }
+
+    function _toggleBlock(editor, type, start_chars, end_chars) {
+      if (/editor-preview-active/.test(editor.codemirror.getWrapperElement().lastChild.className))
+        return;
+
+      end_chars = (typeof end_chars === 'undefined') ? start_chars : end_chars;
+      var cm = editor.codemirror;
+      var stat = getState(cm);
+
+      var text;
+      var start = start_chars;
+      var end = end_chars;
+
+      var startPoint = cm.getCursor('start');
+      var endPoint = cm.getCursor('end');
+
+      if (stat[type]) {
+        text = cm.getLine(startPoint.line);
+        start = text.slice(0, startPoint.ch);
+        end = text.slice(startPoint.ch);
+        if (type == 'bold') {
+          start = start.replace(/(\*\*|__)(?![\s\S]*(\*\*|__))/, '');
+          end = end.replace(/(\*\*|__)/, '');
+        } else if (type == 'italic') {
+          start = start.replace(/(\*|_)(?![\s\S]*(\*|_))/, '');
+          end = end.replace(/(\*|_)/, '');
+        } else if (type == 'strikethrough') {
+          start = start.replace(/(\*\*|~~)(?![\s\S]*(\*\*|~~))/, '');
+          end = end.replace(/(\*\*|~~)/, '');
+        }
+        cm.replaceRange(start + end, {
+          line: startPoint.line,
+          ch: 0,
+        }, {
+          line: startPoint.line,
+          ch: 99999999999999,
+        });
+
+        if (type == 'bold' || type == 'strikethrough') {
+          startPoint.ch -= 2;
+          if (startPoint !== endPoint) {
+            endPoint.ch -= 2;
+          }
+        } else if (type == 'italic') {
+          startPoint.ch -= 1;
+          if (startPoint !== endPoint) {
+            endPoint.ch -= 1;
+          }
+        }
+      } else {
+        text = cm.getSelection();
+        if (type == 'bold') {
+          text = text.split('**').join('');
+          //text = text.split('__').join('');
+        } else if (type == 'italic') {
+          text = text.split('*').join('');
+         // text = text.split('_').join('');
+        } else if (type == 'strikethrough') {
+          text = text.split('~~').join('');
+        }
+        cm.replaceSelection(start + text + end);
+
+        startPoint.ch += start_chars.length;
+        endPoint.ch = startPoint.ch + text.length;
+      }
+
+      cm.setSelection(startPoint, endPoint);
+      cm.focus();
+    }
     /**
      * Initialize editor on the page.
      *
@@ -484,7 +575,21 @@
             placeholder: '',
             element: $currentEditableTextarea[0],
             hintOptions: { hint: topcoderHandles },
-            toolbar: ["bold", "italic", "strikethrough", "|",
+            toolbar: [{ name: "bold",
+               action: function format(editor) {
+                 _toggleBlock(editor, 'bold', editor.options.blockStyles.bold);
+               },
+              className: 'fa fa-bold',
+              title: 'Bold',
+            }
+            , { name: "italic",
+                action: function format(editor) {
+                  _toggleBlock(editor, 'italic', editor.options.blockStyles.italic);
+                },
+                className: 'fa fa-italic',
+                title: 'Italic',
+              }
+            , "strikethrough", "|",
               "heading-1", "heading-2", "heading-3", "|", "code", "quote", "|", "unordered-list",
               "ordered-list", "clean-block", "|", {
                 name: "mentions",
@@ -586,7 +691,14 @@
             } else if(text.length > maxCommentLength) {
               $(editorContainer).addClass('error');
               var count = text.length - maxCommentLength;
-              $(messageContainer).text('Comment is '+ count + ' characters too long');
+              if($(frm).find('#Form_CommentID').length > 0) {
+                $(messageContainer).text('Comment is '+ count + ' characters too long');
+              } else if($(frm).find('#Form_DiscussionID').length > 0) {
+                $(messageContainer).text('Discussion is '+ count + ' characters too long');
+              } else {
+                $(messageContainer).text('Text is '+ count + ' characters too long');
+              }
+
               $(frm).find(':submit').attr('disabled', 'disabled');
               $(frm).find('.Buttons a.Button:not(.Cancel)').addClass('Disabled');
             }
@@ -620,6 +732,72 @@
               }
             }
           });
+
+          editor.codemirror.on('paste', function (cm, event) {
+            var clipboard = event.clipboardData;
+            // trim the trailing newline character, if present.
+            var data = clipboard.getData('text/plain');
+            data = data.replace(/(?:[\n\u0085\u2028\u2029]|\r\n?)$/, '');
+            var rows = data.split((/[\n\u0085\u2028\u2029]|\r\n?/g)).map(function(row) {
+              return row.split("\t");
+            })
+
+            var isTableData = looksLikeTable(rows);
+            if(isTableData) {
+              event.preventDefault();
+            } else{
+              return;
+            }
+
+            var colAlignments = [];
+
+            var columnWidths = rows[0].map(function(column, columnIndex) {
+              var alignment = "l";
+              var re = /^(\^[lcr])/i;
+              var m = column.match(re);
+              if (m) {
+                var align = m[1][1].toLowerCase();
+                if (align === "c") {
+                  alignment = "c";
+                } else if (align === "r") {
+                  alignment = "r";
+                }
+              }
+              colAlignments.push(alignment);
+              column = column.replace(re, "");
+              rows[0][columnIndex] = column;
+              return columnWidth(rows, columnIndex);
+            });
+            var markdownRows = rows.map(function(row, rowIndex) {
+              // | col1   | col2 | col3  |
+              // |--------|------|-------|
+              // | val1   | val2 | val3  |
+              return "| " + row.map(function(column, index) {
+                return column + Array(columnWidths[index] - column.length + 1).join(" ")
+              }).join(" | ") + " |";
+            })
+            markdownRows.splice(1, 0, "|" + columnWidths.map(function(width, index) {
+              var prefix = "";
+              var postfix = "";
+              var adjust = 0;
+              var alignment = colAlignments[index];
+              if (alignment === "r") {
+                postfix = ":";
+                adjust = 1;
+              } else if (alignment == "c") {
+                prefix = ":";
+                postfix = ":";
+                adjust = 2;
+              }
+              return prefix + Array(columnWidths[index] + 3 - adjust).join("-") + postfix;
+            }).join("|") + "|");
+
+            var result =  "\n"+markdownRows.join("\n");
+            var currentCursorPosition = cm.getCursor();
+            cm.replaceSelection(result,{line: currentCursorPosition.line+2, ch: result.length});
+            return false;
+          });
+
           // We have only one main editor at a page which should used for quote/replyto
           // FIX: https://github.com/topcoder-platform/forums/issues/540
           if(allEditors.length == 0) {
