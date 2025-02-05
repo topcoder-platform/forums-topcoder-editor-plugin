@@ -2,25 +2,6 @@
   var editor;
   var allEditors = [];
 
-  /**
-   * Escapes HTML special characters to prevent XSS.
-   * @param {string} input - The string to sanitize.
-   * @returns {string} - The sanitized string.
-   */
-  function sanitizeInput(input) {
-    return input.replace(/[&<>"'`]/g, (char) => {
-      const escapeMap = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-        '`': '&#96;'
-      };
-      return escapeMap[char];
-    });
-  }
-  
   $.fn.setAsEditor = function(selector) {
     selector = selector || '.BodyBox,.js-bodybox';
 
@@ -166,10 +147,10 @@
         var errorMessages = '<div class="Messages Errors"><ul>'
         if(response.errors) {
           for (var error of response.errors) {
-            errorMessages += '<li>Couldn\'t upload '+ file.name +'. '+ ucfirst(sanitizeInput(error.message)) + '</li>'
+            errorMessages += '<li>Couldn\'t upload '+ file.name +'. '+ ucfirst(DOMPurify.sanitize(error.message)) + '</li>'
           }
         } else {
-          errorMessages += '<li>Couldn\'t upload '+ file.name+ '. '+ ucfirst(sanitizeInput(response.message)) + '</li>';
+          errorMessages += '<li>Couldn\'t upload '+ file.name+ '. '+ ucfirst(DOMPurify.sanitize(response.message)) + '</li>';
         }
         errorMessages +='</ul></div>';
         return errorMessages;
@@ -186,7 +167,7 @@
           .replace('#image_size#', humanFileSize(file.size, units))
           .replace('#image_max_size#', humanFileSize(self.options.imageMaxSize, units));
 
-        return '<div class="Messages Errors"><ul><li>'+error + '</li></ul></div>';
+        return '<div class="Messages Errors"><ul><li>'+ DOMPurify.sanitize(error) + '</li></ul></div>';
       }
 
       // Save a position of image/file tag
@@ -484,7 +465,7 @@
     function showErrorMessage(editor, errorMessage) {
       var $element = editor.element;
       var postForm = $element.closest('form');
-      $(postForm).prepend(errorMessage);
+      $(postForm).prepend(DOMPurify.sanitize(errorMessage));
     }
 
     function columnWidth(rows, columnIndex) {
