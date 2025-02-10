@@ -140,6 +140,50 @@ function fixShortcut(name) {
 }
 
 /**
+ * Class handling utility methods.
+ */
+var CLASS_REGEX = {};
+
+/**
+ * Convert a className string into a regex for matching (and cache).
+ * Note that the RegExp includes trailing spaces for replacement
+ * (to ensure that removing a class from the middle of the string will retain
+ *  spacing between other classes.)
+ * @param {String} className Class name to convert to regex for matching.
+ * @returns {RegExp} Regular expression option that will match className.
+ */
+function getClassRegex (className) {
+    return CLASS_REGEX[className] || (CLASS_REGEX[className] = new RegExp('\\s*' + className + '(\\s*)', 'g'));
+}
+
+/**
+ * Add a class string to an element.
+ * @param {Element} el DOM element on which to add className.
+ * @param {String} className Class string to apply
+ * @returns {void}
+ */
+function addClass (el, className) {
+    if (!el || !className) return;
+    var classRegex = getClassRegex(className);
+    if (el.className.match(classRegex)) return; // already applied
+    el.className += ' ' + className;
+}
+
+/**
+ * Remove a class string from an element.
+ * @param {Element} el DOM element from which to remove className.
+ * @param {String} className Class string to remove
+ * @returns {void}
+ */
+ function removeClass (el, className) {
+    if (!el || !className) return;
+    var classRegex = getClassRegex(className);
+    if (!el.className.match(classRegex)) return; // not available to remove
+    el.className = el.className.replace(classRegex, '$1');
+}
+
+
+/**
  * Create dropdown block
  */
 function createToolbarDropdown(options, enableTooltips, shortcuts, parent) {
@@ -333,11 +377,22 @@ function toggleFullScreen(editor) {
         document.body.style.overflow = saved_overflow;
     }
 
+    var wrapper = cm.getWrapperElement();
+    var sidebyside = wrapper.nextSibling;
 
-    // Hide side by side if needed
-    var sidebyside = cm.getWrapperElement().nextSibling;
-    if (/editor-preview-active-side/.test(sidebyside.className))
-        toggleSideBySide(editor);
+    if (/editor-preview-active-side/.test(sidebyside.className)) {
+        if (editor.options.sideBySideFullscreen === false) {
+            // if side-by-side not-fullscreen ok, apply classes as needed
+            var easyMDEContainer = wrapper.parentNode;
+            if (cm.getOption('fullScreen')) {
+                removeClass(easyMDEContainer, 'sided--no-fullscreen');
+            } else {
+                addClass(easyMDEContainer, 'sided--no-fullscreen');
+            }
+        } else {
+            toggleSideBySide(editor);
+        }
+    }
 
     if (editor.options.onToggleFullScreen) {
         editor.options.onToggleFullScreen(cm.getOption('fullScreen') || false);
@@ -814,7 +869,7 @@ function afterImageUploaded(editor, url) {
     var stat = getState(cm);
     var options = editor.options;
     var imageName = url.substr(url.lastIndexOf('/') + 1);
-    var ext = imageName.substring(imageName.lastIndexOf('.') + 1);
+    var ext = imageName.substring(imageName.lastIndexOf('.') + 1).replace(/\?.*$/, '');
 
     // Check if media is an image
     if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
@@ -883,32 +938,12 @@ function toggleSideBySide(editor) {
     var toolbarButton = editor.toolbarElements && editor.toolbarElements['side-by-side'];
     var useSideBySideListener = false;
 
-    var noFullscreenItems = [
-        wrapper.parentNode, // easyMDEContainer
-        editor.gui.toolbar,
-        wrapper,
-        preview,
-        editor.gui.statusbar,
-    ];
-
-    function addNoFullscreenClass(el) {
-        el.className += ' sided--no-fullscreen';
-    }
-
-    function removeNoFullscreenClass(el) {
-        if (el != null) {
-            el.className = el.className.replace(
-                /\s*sided--no-fullscreen\s*/g, ''
-            );
-        }
-    }
+    var easyMDEContainer = wrapper.parentNode;
 
     if (/editor-preview-active-side/.test(preview.className)) {
-        if (cm.getOption('sideBySideNoFullscreen')) {
-            cm.setOption('sideBySideNoFullscreen', false);
-            noFullscreenItems.forEach(function (el) {
-                removeNoFullscreenClass(el);
-            });
+        if (editor.options.sideBySideFullscreen === false) {
+            // if side-by-side not-fullscreen ok, remove classes when hiding side
+            removeClass(easyMDEContainer, 'sided--no-fullscreen');
         }
         preview.className = preview.className.replace(
             /\s*editor-preview-active-side\s*/g, ''
@@ -922,12 +957,8 @@ function toggleSideBySide(editor) {
         setTimeout(function () {
             if (!cm.getOption('fullScreen')) {
                 if (editor.options.sideBySideFullscreen === false) {
-                    cm.setOption('sideBySideNoFullscreen', true);
-                    noFullscreenItems.forEach(function(el) {
-                        if (el != null) {
-                            addNoFullscreenClass(el);
-                        }
-                    });
+                    // if side-by-side not-fullscreen ok, add classes when not fullscreen and showing side
+                    addClass(easyMDEContainer, 'sided--no-fullscreen');
                 } else {
                     toggleFullScreen(editor);
                 }
@@ -1876,7 +1907,7 @@ EasyMDE.prototype.uploadImagesUsingCustomFunction = function (imageUploadFunctio
         names.push(files[i].name);
         this.uploadImageUsingCustomFunction(imageUploadFunction, files[i]);
     }
-    // this.updateStatusBar('upload-image', this.options.imageTexts.sbOnDrop.replace('#images_names#', names.join(', ')));
+   // this.updateStatusBar('upload-image', this.options.imageTexts.sbOnDrop.replace('#images_names#', names.join(', ')));
 };
 
 /**
@@ -2019,15 +2050,12 @@ EasyMDE.prototype.render = function (el) {
       mode = 'overlay-mode';
       backdrop = options.parsingConfig;
       backdrop.gitHubSpice = false;
-
-      if (options.spellChecker !== false) {
-        backdrop.name = 'gfm';
-
-        CodeMirrorSpellChecker({
-          codeMirrorInstance: CodeMirror,
-        });
-
-      } else if (options.spellChecker !== false) {
+    } else {
+        mode = options.parsingConfig;
+        mode.name = 'gfm';
+        mode.gitHubSpice = false;
+    }
+    if (options.spellChecker !== false) {
         mode = 'spell-checker';
         backdrop = options.parsingConfig;
         backdrop.name = 'gfm';
@@ -2036,11 +2064,6 @@ EasyMDE.prototype.render = function (el) {
         CodeMirrorSpellChecker({
             codeMirrorInstance: CodeMirror,
         });
-      }
-    } else {
-        mode = options.parsingConfig;
-        mode.name = 'gfm';
-        mode.gitHubSpice = false;
     }
 
     // eslint-disable-next-line no-unused-vars
@@ -2062,7 +2085,6 @@ EasyMDE.prototype.render = function (el) {
         extraKeys: keyMaps,
         lineWrapping: (options.lineWrapping === false) ? false : true,
         allowDropFileTypes: ['text/plain'],
-      //  dragDrop: (options.uploadImage != undefined)? options.uploadImage: false,
         placeholder: options.placeholder || el.getAttribute('placeholder') || '',
         styleSelectedText: (options.styleSelectedText != undefined) ? options.styleSelectedText : !isMobile(),
         scrollbarStyle: (options.scrollbarStyle != undefined) ? options.scrollbarStyle : 'native',
@@ -2185,7 +2207,6 @@ EasyMDE.prototype.render = function (el) {
 };
 
 EasyMDE.prototype.cleanup = function () {
-    window.removeEventListener(this.onWindowResize);
     document.removeEventListener('keydown', this.documentOnKeyDown);
 };
 
@@ -2277,7 +2298,6 @@ EasyMDE.prototype.clearAutosavedValue = function () {
 EasyMDE.prototype.openBrowseFileWindow = function (onSuccess, onError) {
     var self = this;
     var imageInput = this.gui.toolbar.getElementsByClassName('imageInput')[0];
-
     imageInput.click(); //dispatchEvent(new MouseEvent('click'));  // replaced with click() for IE11 compatibility.
     function onChange(event) {
         if (self.options.imageUploadFunction) {
@@ -2360,7 +2380,7 @@ EasyMDE.prototype.uploadImage = function (file, onSuccess, onError) {
             return;
         }
         if (this.status === 200 && response && !response.error && response.data && response.data.filePath) {
-            onSuccess(window.location.origin + '/' + response.data.filePath);
+            onSuccess((self.options.imagePathAbsolute ? '' : (window.location.origin + '/')) + response.data.filePath);
         } else {
             if (response.error && response.error in self.options.errorMessages) {  // preformatted error message
                 onErrorSup(fillErrorMessage(self.options.errorMessages[response.error]));
@@ -2693,7 +2713,6 @@ EasyMDE.prototype.createStatusbar = function (status) {
 
         // Ensure the defaultValue is a function
         if (typeof item.defaultValue === 'function') {
-            // FIX: Fixed issues with status bar if there are several editors on a page
             item.defaultValue(el, this.codemirror);
         }
 
@@ -2701,7 +2720,7 @@ EasyMDE.prototype.createStatusbar = function (status) {
         // Ensure the onUpdate is a function
         if (typeof item.onUpdate === 'function') {
             // Create a closure around the span of the current action, then execute the onUpdate handler
-            // FIX: Fixed issues with status bar if there are several editors on a page
+            // FIX: issues with status bar if there are several editors on a page
             this.codemirror.on('update', (function (el, item, cm) {
                 return function () {
                     item.onUpdate(el,cm);
@@ -2710,7 +2729,6 @@ EasyMDE.prototype.createStatusbar = function (status) {
         }
         if (typeof item.onActivity === 'function') {
             // Create a closure around the span of the current action, then execute the onActivity handler
-            // FIX: Fixed issues with status bar if there are several editors on a page
             this.codemirror.on('cursorActivity', (function (el, item, cm) {
                 return function () {
                     item.onActivity(el, cm);
